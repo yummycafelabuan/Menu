@@ -7,27 +7,27 @@
 <meta name="description" content="View Yummy Cafe's Menu">
 <style>
   :root{
-  --bg: #fcf8f1;         /* warm cream background */
-  --text: #3a2f2f;       /* dark brown/grey for body text */
-  --muted: #7a6f66;      /* muted warm grey for hints */
-  --accent: #2b7cc7;     /* blue highlight (tabs, prices, buttons) */
-  --accent2: #d88b4a;    /* bread/golden brown secondary accent */
-  --card: #fffdf8;       /* slightly lighter cream for cards */
-  --border: #e6d9c3;     /* beige border */
-  --shadow: 0 1px 2px rgba(0,0,0,.08);
-}
-@media (prefers-color-scheme: dark){
-  :root{
-    --bg: #1c1c1c;       
-    --text: #f5f2e7;     
-    --muted: #a69485;    
-    --accent: #4ea0f2;   /* lighter blue for dark mode */
-    --accent2: #f0a060;  /* softer gold for dark mode */
-    --card: #1a1a1a;     
-    --border: #2e2e2e;   
-    --shadow: 0 1px 3px rgba(0,0,0,.6);
+    --bg: #fcf8f1;         /* warm cream background */
+    --text: #3a2f2f;       /* dark brown/grey for body text */
+    --muted: #7a6f66;      /* muted warm grey for hints */
+    --accent: #2b7cc7;     /* blue highlight (tabs, prices, buttons) */
+    --accent2: #d88b4a;    /* bread/golden brown secondary accent */
+    --card: #fffdf8;       /* slightly lighter cream for cards */
+    --border: #e6d9c3;     /* beige border */
+    --shadow: 0 1px 2px rgba(0,0,0,.08);
   }
-}
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg: #1c1c1c;       
+      --text: #f5f2e7;     
+      --muted: #a69485;    
+      --accent: #4ea0f2;   /* lighter blue for dark mode */
+      --accent2: #f0a060;  /* softer gold for dark mode */
+      --card: #1a1a1a;     
+      --border: #2e2e2e;   
+      --shadow: 0 1px 3px rgba(0,0,0,.6);
+    }
+  }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
   html{scroll-behavior:smooth} /* smooth jump to sections */
@@ -36,8 +36,8 @@
   /* Sticky header with brand + search + tabs */
   header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border)}
   .brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px}
-  .brand h1{font-size:20px;margin:0}
-  .notice{margin:0 16px 12px;color:var(--muted);font-size:.9rem}
+  .brand h1{font-size:0;margin:0;line-height:0} /* we only show a logo inside h1 */
+  .brand img{height:56px;width:auto;display:block} /* adjust logo size here */
   .search{padding:0 16px 12px}
   .search input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text)}
 
@@ -53,7 +53,7 @@
 
   main{padding:16px 0 40px}
   section{scroll-margin-top:90px;margin:20px 0} /* ensure header isn't hidden under sticky bar; tweak if needed */
-  h2{font-size:1.2rem;margin:0 0 10px;padding:0 4px;border-left:4px solid var(--accent)}
+  h2{font-size:1.2rem;margin:0 0 10px;padding:0 4px;border-left:4px solid var(--accent2)}
 
   .grid{display:grid;grid-template-columns:1fr;gap:12px}
   @media(min-width:680px){ .grid{grid-template-columns:1fr 1fr} }
@@ -74,8 +74,9 @@
 <body>
 <header>
   <div class="wrap brand">
-    <h1 id="cafename">Yummy Cafe's Menu</h1>
-    <img src="Yummy-logo.png" alt="Logo" width="200" height="200">
+    <h1 id="cafename">
+      <img src="Yummy-logo.png" alt="Yummy Cafe" />
+    </h1>
   </div>
   <div class="search">
     <div class="wrap"><input id="q" type="search" placeholder="Search: Lemon Teh, Dalgona Coffee.." aria-label="Search menu"></div>
@@ -127,7 +128,7 @@
   const q   = document.getElementById('q');
 
   // ----- Load Settings (optional) -----
-  const settings = { name:'Yummy Cafe', notice:'Prices include GST.', footer_line:'', locale:'en-AU', currency:'MYR', emojis:{} };
+  const settings = { name:'Yummy Cafe', notice:'', footer_line:'', locale:'en-MY', currency:'MYR', emojis:{} };
   if (SETTINGS_CSV_URL){
     try{
       const srows = await fetchCSV(SETTINGS_CSV_URL);
@@ -174,6 +175,15 @@
     return;
   }
 
+  // ---- Price formatting: always display "RM", use MYR internally ----
+  function formatRM(amount){
+    if (!Number.isFinite(amount)) return '';
+    return new Intl.NumberFormat(settings.locale || 'en-MY', {
+      style: 'currency',
+      currency: settings.currency || 'MYR'
+    }).format(amount).replace('MYR','RM');
+  }
+
   const toNum = v => {
     const s = String(v ?? '').replace(/\$/g,'').replace(/,/g,'').trim();
     const n = parseFloat(s);
@@ -218,33 +228,22 @@
   }));
 
   // ----- Render helpers -----
-// Price formatter that always shows "RM"
-function formatRM(amount){
-  if (!Number.isFinite(amount)) return '';
-  return new Intl.NumberFormat(settings.locale || 'en-MY', {
-    style: 'currency',
-    currency: settings.currency || 'MYR'
-  })
-  .format(amount)
-  .replace('MYR','RM');  // force RM instead of MYR
-}
-
-function renderPrice(it){
-  if (Array.isArray(it.options) && it.options.length){
-    return it.options.map(o => `${o.label}: ${formatRM(o.price)}`).join('<br>');
+  function renderPrice(it){
+    if (Array.isArray(it.options) && it.options.length){
+      return it.options.map(o => `${o.label}: ${formatRM(o.price)}`).join('<br>');
+    }
+    const lines=[];
+    if (Number.isFinite(it.price_hot))  lines.push(`Hot: ${formatRM(it.price_hot)}`);
+    if (Number.isFinite(it.price_iced)) lines.push(`Iced: ${formatRM(it.price_iced)}`);
+    if (lines.length) return lines.join('<br>');
+    if (Number.isFinite(it.price)) return formatRM(it.price);
+    return '';
   }
-  const lines=[];
-  if (Number.isFinite(it.price_hot))  lines.push(`Hot: ${formatRM(it.price_hot)}`);
-  if (Number.isFinite(it.price_iced)) lines.push(`Iced: ${formatRM(it.price_iced)}`);
-  if (lines.length) return lines.join('<br>');
-  if (Number.isFinite(it.price)) return formatRM(it.price);
-  return '';
-}
+
   // ----- Header/Footer text -----
-  document.getElementById('cafename').textContent = settings.name || 'Menu';
+  // IMPORTANT: do NOT overwrite the logo in the <h1>; only update footer + year
   document.getElementById('footname').textContent = settings.name || 'Menu';
   document.getElementById('y').textContent = new Date().getFullYear();
-  // if (settings.notice)      document.getElementById('notice').textContent = settings.notice;
   if (settings.footer_line) document.getElementById('footerline').textContent = settings.footer_line;
 
   // ----- Build tabs + sections -----
@@ -290,70 +289,64 @@ function renderPrice(it){
     });
   });
 
-  // ----- Active tab highlight (click = instant, scroll/hash = sync) -----
-// ----- Active tab highlight (section-top at viewport center) -----
-const links = Array.from(nav.querySelectorAll('a'));
-const sectionEls = sections.map(s => document.getElementById(s.slug));
+  // ----- Active tab highlight (section-top at viewport center) -----
+  const links = Array.from(nav.querySelectorAll('a'));
+  const sectionEls = sections.map(s => document.getElementById(s.slug));
 
-function setActiveByIndex(iActive){
-  links.forEach((l,i)=>{
-    const on = i === iActive;
-    l.classList.toggle('active', on);
-    if (on) l.setAttribute('aria-current','page'); else l.removeAttribute('aria-current');
+  function setActiveByIndex(iActive){
+    links.forEach((l,i)=>{
+      const on = i === iActive;
+      l.classList.toggle('active', on);
+      if (on) l.setAttribute('aria-current','page'); else l.removeAttribute('aria-current');
+    });
+  }
+
+  // Click: center the section's start line in the viewport & update hash immediately
+  links.forEach((link, i) => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = sections[i].slug;
+      const target = document.getElementById(id);
+      if (!target) return;
+      history.pushState(null, '', '#'+id);       // keep URL in sync
+      target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
+      setActiveByIndex(i);                       // instant visual feedback
+    });
   });
-}
 
-function indexFromHash(){
-  const h = (location.hash || '').slice(1);
-  const idx = sections.findIndex(s => s.slug === h);
-  return idx >= 0 ? idx : 0;
-}
+  // Scroll: pick the section whose TOP is nearest the viewport center
+  let ticking = false;
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const center = window.scrollY + window.innerHeight * 0.5;
+      let active = 0, best = Infinity;
+      for (let i = 0; i < sectionEls.length; i++){
+        const sec = sectionEls[i];
+        if (!sec) continue;
+        const d = Math.abs(sec.offsetTop - center);
+        if (d < best){ best = d; active = i; }
+      }
+      setActiveByIndex(active);
+      ticking = false;
+    });
+  };
 
-// Click: center the section's start line in the viewport & update hash immediately
-links.forEach((link, i) => {
-  link.addEventListener('click', (e) => {
-    e.preventDefault();
-    const id = sections[i].slug;
-    const target = document.getElementById(id);
-    if (!target) return;
-    history.pushState(null, '', '#'+id);       // keep URL in sync
-    target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
-    setActiveByIndex(i);                       // instant visual feedback
-  });
-});
+  // Hash navigation (back/forward/deep link): center the section and sync active
+  const onHashChange = () => {
+    const h = (location.hash || '').slice(1);
+    const idx = sections.findIndex(s => s.slug === h);
+    const target = idx >= 0 ? sectionEls[idx] : null;
+    if (target) target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
+    if (idx >= 0) setActiveByIndex(idx);
+  };
 
-// Scroll: pick the section whose TOP is nearest the viewport center
-let ticking = false;
-const onScroll = () => {
-  if (ticking) return;
-  ticking = true;
-  requestAnimationFrame(() => {
-    const center = window.scrollY + window.innerHeight * 0.5;
-    let active = 0, best = Infinity;
-    for (let i = 0; i < sectionEls.length; i++){
-      const sec = sectionEls[i];
-      if (!sec) continue;
-      const d = Math.abs(sec.offsetTop - center);
-      if (d < best){ best = d; active = i; }
-    }
-    setActiveByIndex(active);
-    ticking = false;
-  });
-};
-
-// Hash navigation (back/forward/deep link): center the section and sync active
-const onHashChange = () => {
-  const i = indexFromHash();
-  const target = sectionEls[i];
-  if (target) target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
-  setActiveByIndex(i);
-};
-
-// Init
-setActiveByIndex(indexFromHash());
-document.addEventListener('scroll', onScroll, {passive:true});
-window.addEventListener('hashchange', onHashChange, {passive:true});
-onScroll();
+  // Init
+  setActiveByIndex(0);
+  document.addEventListener('scroll', onScroll, {passive:true});
+  window.addEventListener('hashchange', onHashChange, {passive:true});
+  onScroll();
 })();
 </script>
 </body>
