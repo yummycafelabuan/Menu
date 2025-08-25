@@ -129,7 +129,7 @@
   const q   = document.getElementById('q');
 
   // ----- Load Settings (optional) -----
-  const settings = { name:'Yummy Cafe', notice:'Prices include GST.', footer_line:'', locale:'en-AU', currency:'RM', emojis:{} };
+  const settings = { name:'Yummy Cafe', notice:'Prices include GST.', footer_line:'', locale:'en-AU', currency:'MYR', emojis:{} };
   if (SETTINGS_CSV_URL){
     try{
       const srows = await fetchCSV(SETTINGS_CSV_URL);
