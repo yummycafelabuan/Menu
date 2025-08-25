@@ -220,19 +220,28 @@
   }));
 
   // ----- Render helpers -----
-  const fmt = new Intl.NumberFormat(settings.locale || 'en-AU', {style:'currency', currency: settings.currency || 'AUD'});
-  function renderPrice(it){
-    if (Array.isArray(it.options) && it.options.length){
-      return it.options.map(o => `${o.label}: ${fmt.format(o.price)}`).join('<br>');
-    }
-    const lines=[];
-    if (Number.isFinite(it.price_hot))  lines.push(`Hot: ${fmt.format(it.price_hot)}`);
-    if (Number.isFinite(it.price_iced)) lines.push(`Iced: ${fmt.format(it.price_iced)}`);
-    if (lines.length) return lines.join('<br>');
-    if (Number.isFinite(it.price)) return fmt.format(it.price);
-    return '';
-  }
+// Price formatter that always shows "RM"
+function formatRM(amount){
+  if (!Number.isFinite(amount)) return '';
+  return new Intl.NumberFormat(settings.locale || 'en-MY', {
+    style: 'currency',
+    currency: settings.currency || 'MYR'
+  })
+  .format(amount)
+  .replace('MYR','RM');  // force RM instead of MYR
+}
 
+function renderPrice(it){
+  if (Array.isArray(it.options) && it.options.length){
+    return it.options.map(o => `${o.label}: ${formatRM(o.price)}`).join('<br>');
+  }
+  const lines=[];
+  if (Number.isFinite(it.price_hot))  lines.push(`Hot: ${formatRM(it.price_hot)}`);
+  if (Number.isFinite(it.price_iced)) lines.push(`Iced: ${formatRM(it.price_iced)}`);
+  if (lines.length) return lines.join('<br>');
+  if (Number.isFinite(it.price)) return formatRM(it.price);
+  return '';
+}
   // ----- Header/Footer text -----
   document.getElementById('cafename').textContent = settings.name || 'Menu';
   document.getElementById('footname').textContent = settings.name || 'Menu';
