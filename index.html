@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Nam Thong — Menu</title>
+<meta name="description" content="View Nam Thong's Menu">
+<style>
+  :root{
+  --bg: #fcf8f1;         /* warm cream background */
+  --text: #3a2f2f;       /* dark brown/grey for body text */
+  --muted: #7a6f66;      /* muted warm grey for hints */
+  --accent: #2b7cc7;     /* blue highlight (tabs, prices, buttons) */
+  --accent2: #d88b4a;    /* bread/golden brown secondary accent */
+  --card: #fffdf8;       /* slightly lighter cream for cards */
+  --border: #e6d9c3;     /* beige border */
+  --shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg: #1c1c1c;       
+    --text: #f5f2e7;     
+    --muted: #a69485;    
+    --accent: #4ea0f2;   /* lighter blue for dark mode */
+    --accent2: #f0a060;  /* softer gold for dark mode */
+    --card: #1a1a1a;     
+    --border: #2e2e2e;   
+    --shadow: 0 1px 3px rgba(0,0,0,.6);
+  }
+}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+  html{scroll-behavior:smooth} /* smooth jump to sections */
+  .wrap{max-width:900px;margin:0 auto;padding:0 16px}
+
+  /* Sticky header with brand + search + tabs */
+  header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border)}
+  .brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px}
+  .brand h1{font-size:20px;margin:0}
+  .notice{margin:0 16px 12px;color:var(--muted);font-size:.9rem}
+  .search{padding:0 16px 12px}
+  .search input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text)}
+
+  nav#nav{display:flex;gap:8px;overflow-x:auto;padding:8px 16px 12px}
+  nav#nav a{
+    flex-shrink:0;text-decoration:none;color:var(--text);
+    padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:var(--card);
+    box-shadow:var(--shadow);font-size:.92rem;white-space:nowrap
+  }
+  /* Strong, clear active state */
+  nav#nav a.active{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),var(--shadow)}
+  nav#nav a:hover,nav#nav a:focus-visible{border-color:var(--accent);outline:none}
+
+  main{padding:16px 0 40px}
+  section{scroll-margin-top:90px;margin:20px 0} /* ensure header isn't hidden under sticky bar; tweak if needed */
+  h2{font-size:1.2rem;margin:0 0 10px;padding:0 4px;border-left:4px solid var(--accent)}
+
+  .grid{display:grid;grid-template-columns:1fr;gap:12px}
+  @media(min-width:680px){ .grid{grid-template-columns:1fr 1fr} }
+
+  .item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .title{font-weight:600}
+  .price{font-variant-numeric:tabular-nums;color:var(--accent)}
+  .price-lines{text-align:right;line-height:1.25}
+  .desc{margin:6px 0 0;color:var(--muted);font-size:.93rem}
+  .tags{margin-top:6px;font-size:.8rem;color:var(--accent)}
+
+  footer{border-top:1px solid var(--border);margin-top:28px}
+  .small{font-size:.85rem;color:var(--muted)}
+  .foot{padding:16px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap brand">
+    <h1 id="cafename">Nam Thong Menu</h1>
+    <!-- Optional logo:
+    <img src="logo.png" alt="Logo" width="28" height="28"> -->
+  </div>
+  <p class="notice" id="notice">Prices include GST. Please advise staff of allergies.</p>
+  <div class="search">
+    <div class="wrap"><input id="q" type="search" placeholder="Search: latte, vegan, gluten-free…" aria-label="Search menu"></div>
+  </div>
+  <nav id="nav" class="wrap" aria-label="Sections"></nav>
+</header>
+
+<main class="wrap" id="content">
+  <div id="menu"></div>
+  <footer class="small">
+    <div class="foot">© <span id="y"></span> <span id="footname">Nam Thong</span> · <span id="footerline">123 Sample St · Open daily 7am–3pm · 03 9000 0000</span></div>
+  </footer>
+</main>
+
+<script>
+(async function(){
+  // ====== YOUR PUBLISHED SHEETS LINKS ======
+  const MENU_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR993n_rtbnc72EtXBa1wEpUZaOT2KkEKoTrKobaXUp8QXkDxHzRlOOiwYnTCdWNJPgfd0K9Zfo6fs0/pub?gid=1421581944&single=true&output=csv';
+  const SETTINGS_CSV_URL = null; // set to a published CSV if you later add a Settings tab
+
+  // ----- CSV parser (handles quotes/commas/newlines) -----
+  function parseCSV(text){
+    const rows = []; let i=0, field='', row=[], inQ=false;
+    while(i<text.length){
+      const c=text[i];
+      if(inQ){
+        if(c==='"' && text[i+1]==='"'){ field+='"'; i++; }
+        else if(c==='"'){ inQ=false; } else { field+=c; }
+      }else{
+        if(c==='"'){ inQ=true; }
+        else if(c===','){ row.push(field); field=''; }
+        else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+        else if(c!=='\r'){ field+=c; }
+      }
+      i++;
+    }
+    row.push(field); rows.push(row);
+    return rows;
+  }
+  async function fetchCSV(url){
+    const res = await fetch(url + (url.includes('?')?'&':'?') + 't=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return parseCSV(await res.text());
+  }
+
+  // ----- DOM refs -----
+  const out = document.getElementById('menu');
+  const nav = document.getElementById('nav');
+  const q   = document.getElementById('q');
+
+  // ----- Load Settings (optional) -----
+  const settings = { name:'Nam Thong', notice:'Prices include GST.', footer_line:'', locale:'en-AU', currency:'AUD', emojis:{} };
+  if (SETTINGS_CSV_URL){
+    try{
+      const srows = await fetchCSV(SETTINGS_CSV_URL);
+      const [hdr,...rest] = srows;
+      for (const r of rest){
+        const k=(r[0]||'').trim(), v=(r[1]||'').trim();
+        if(!k) continue;
+        if(k.startsWith('emoji:')) settings.emojis[k.split(':')[1]] = v;
+        else settings[k]=v;
+      }
+    }catch(e){ console.warn('Settings CSV failed:', e); }
+  }
+
+  // ----- Load Menu -----
+  let mrows;
+  try{
+    mrows = await fetchCSV(MENU_CSV_URL);
+  }catch(e){
+    out.innerHTML = '<p style="color:#c33">Could not load the menu. Please try again.</p>';
+    console.error(e);
+    return;
+  }
+
+  if(!mrows || !mrows.length){
+    out.innerHTML = '<p>No data found in the CSV.</p>';
+    return;
+  }
+
+  const header = mrows[0].map(h=>h.trim().toLowerCase());
+  const idx = (n)=> header.indexOf(n);
+  const iSection=idx('section'), iName=idx('name'), iPrice=idx('price'),
+        iHot=idx('hot_price'), iIced=idx('iced_price'), iOptions=idx('options'),
+        iDesc=idx('desc'), iTags=idx('tags');
+
+  // Guard: required columns present
+  if (iSection < 0 || iName < 0){
+    out.innerHTML = `
+      <p style="color:#c33">
+        Missing required CSV headers.<br>
+        Found: <code>${header.join(', ')}</code><br>
+        Need at least: <code>section</code> and <code>name</code>.
+      </p>`;
+    console.error('CSV headers:', header);
+    return;
+  }
+
+  const toNum = v => {
+    const s = String(v ?? '').replace(/\$/g,'').replace(/,/g,'').trim();
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : NaN;
+  };
+
+  const items = mrows.slice(1).map(r => ({
+    section:(r[iSection]||'').trim(),
+    name:(r[iName]||'').trim(),
+    price: toNum(r[iPrice]),
+    price_hot: toNum(r[iHot]),
+    price_iced: toNum(r[iIced]),
+    options: String(r[iOptions]||'').split(';').map(s=>{
+      const [label,price]=s.split(':').map(x=> (x||'').trim());
+      const p = toNum(price);
+      if(!label || !Number.isFinite(p)) return null;
+      return {label, price:p};
+    }).filter(Boolean),
+    desc: iDesc>=0 ? String(r[iDesc]||'').trim() : '',
+    tags: iTags>=0 ? String(r[iTags]||'').split(',').map(s=>s.trim()).filter(Boolean) : []
+  })).filter(x => x.section && x.name);
+
+  if (!items.length){
+    out.innerHTML = `
+      <p style="color:#c33">
+        No menu items found. Check that each row has <code>section</code> and <code>name</code>, and that there are no extra blank header rows.
+      </p>`;
+    return;
+  }
+
+  // group by section (preserve order of first appearance)
+  const bySection = {};
+  const order = [];
+  for (const it of items){
+    if(!bySection[it.section]){ bySection[it.section]=[]; order.push(it.section); }
+    bySection[it.section].push(it);
+  }
+  const sections = order.map(name => ({
+    slug: name.toLowerCase().replace(/&/g,'and').replace(/[\/+]/g,' ').trim().replace(/\s+/g,'-'),
+    name,
+    emoji: settings.emojis?.[name] || ''
+  }));
+
+  // ----- Render helpers -----
+  const fmt = new Intl.NumberFormat(settings.locale || 'en-AU', {style:'currency', currency: settings.currency || 'AUD'});
+  function renderPrice(it){
+    if (Array.isArray(it.options) && it.options.length){
+      return it.options.map(o => `${o.label}: ${fmt.format(o.price)}`).join('<br>');
+    }
+    const lines=[];
+    if (Number.isFinite(it.price_hot))  lines.push(`Hot: ${fmt.format(it.price_hot)}`);
+    if (Number.isFinite(it.price_iced)) lines.push(`Iced: ${fmt.format(it.price_iced)}`);
+    if (lines.length) return lines.join('<br>');
+    if (Number.isFinite(it.price)) return fmt.format(it.price);
+    return '';
+  }
+
+  // ----- Header/Footer text -----
+  document.getElementById('cafename').textContent = settings.name || 'Menu';
+  document.getElementById('footname').textContent = settings.name || 'Menu';
+  document.getElementById('y').textContent = new Date().getFullYear();
+  if (settings.notice)      document.getElementById('notice').textContent = settings.notice;
+  if (settings.footer_line) document.getElementById('footerline').textContent = settings.footer_line;
+
+  // ----- Build tabs + sections -----
+  const outEl = document.getElementById('menu');
+  nav.innerHTML=''; outEl.innerHTML='';
+  sections.forEach(secData=>{
+    // tab
+    const a=document.createElement('a');
+    a.href='#'+secData.slug;
+    a.textContent=secData.name;
+    a.setAttribute('role','tab');
+    nav.appendChild(a);
+
+    // section
+    const sec=document.createElement('section'); sec.id=secData.slug;
+    const h2=document.createElement('h2');
+    h2.textContent=(secData.emoji?secData.emoji+' ':'')+secData.name;
+    sec.appendChild(h2);
+
+    const grid=document.createElement('div'); grid.className='grid';
+    bySection[secData.name].forEach(it=>{
+      const art=document.createElement('article'); art.className='item'; art.dataset.tags=(it.tags||[]).join(' ').toLowerCase();
+      art.innerHTML=`
+        <div class="row">
+          <div class="title">${it.name}</div>
+          <div class="price price-lines">${renderPrice(it)}</div>
+        </div>
+        ${it.desc ? `<div class="desc">${it.desc}</div>` : ''}
+        ${it.tags && it.tags.length ? `<div class="tags">${it.tags.join(' • ')}</div>` : ''}
+      `;
+      grid.appendChild(art);
+    });
+    sec.appendChild(grid); outEl.appendChild(sec);
+  });
+
+  // ----- Search -----
+  const itemsEls = () => Array.from(document.querySelectorAll('.item'));
+  q.addEventListener('input', ()=>{
+    const term=q.value.trim().toLowerCase();
+    itemsEls().forEach(el=>{
+      const text=el.innerText.toLowerCase()+' '+(el.dataset.tags||'');
+      el.style.display = text.includes(term) ? '' : 'none';
+    });
+  });
+
+  // ----- Active tab highlight (click = instant, scroll/hash = sync) -----
+// ----- Active tab highlight (section-top at viewport center) -----
+const links = Array.from(nav.querySelectorAll('a'));
+const sectionEls = sections.map(s => document.getElementById(s.slug));
+
+function setActiveByIndex(iActive){
+  links.forEach((l,i)=>{
+    const on = i === iActive;
+    l.classList.toggle('active', on);
+    if (on) l.setAttribute('aria-current','page'); else l.removeAttribute('aria-current');
+  });
+}
+
+function indexFromHash(){
+  const h = (location.hash || '').slice(1);
+  const idx = sections.findIndex(s => s.slug === h);
+  return idx >= 0 ? idx : 0;
+}
+
+// Click: center the section's start line in the viewport & update hash immediately
+links.forEach((link, i) => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const id = sections[i].slug;
+    const target = document.getElementById(id);
+    if (!target) return;
+    history.pushState(null, '', '#'+id);       // keep URL in sync
+    target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
+    setActiveByIndex(i);                       // instant visual feedback
+  });
+});
+
+// Scroll: pick the section whose TOP is nearest the viewport center
+let ticking = false;
+const onScroll = () => {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    const center = window.scrollY + window.innerHeight * 0.5;
+    let active = 0, best = Infinity;
+    for (let i = 0; i < sectionEls.length; i++){
+      const sec = sectionEls[i];
+      if (!sec) continue;
+      const d = Math.abs(sec.offsetTop - center);
+      if (d < best){ best = d; active = i; }
+    }
+    setActiveByIndex(active);
+    ticking = false;
+  });
+};
+
+// Hash navigation (back/forward/deep link): center the section and sync active
+const onHashChange = () => {
+  const i = indexFromHash();
+  const target = sectionEls[i];
+  if (target) target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
+  setActiveByIndex(i);
+};
+
+// Init
+setActiveByIndex(indexFromHash());
+document.addEventListener('scroll', onScroll, {passive:true});
+window.addEventListener('hashchange', onHashChange, {passive:true});
+onScroll();
+})();
+</script>
+</body>
+</html>
