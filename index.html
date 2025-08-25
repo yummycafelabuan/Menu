@@ -77,7 +77,6 @@
     <h1 id="cafename">Yummy Cafe's Menu</h1>
     <img src="Yummy-logo.png" alt="Logo" width="100" height="100">
   </div>
-  <p class="notice" id="notice">Prices include GST. Please advise staff of allergies.</p>
   <div class="search">
     <div class="wrap"><input id="q" type="search" placeholder="Search: Lemon Teh, Dalgona Coffee.." aria-label="Search menu"></div>
   </div>
@@ -245,7 +244,7 @@ function renderPrice(it){
   document.getElementById('cafename').textContent = settings.name || 'Menu';
   document.getElementById('footname').textContent = settings.name || 'Menu';
   document.getElementById('y').textContent = new Date().getFullYear();
-  if (settings.notice)      document.getElementById('notice').textContent = settings.notice;
+  // if (settings.notice)      document.getElementById('notice').textContent = settings.notice;
   if (settings.footer_line) document.getElementById('footerline').textContent = settings.footer_line;
 
   // ----- Build tabs + sections -----
